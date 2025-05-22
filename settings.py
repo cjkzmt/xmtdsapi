@@ -1,4 +1,3 @@
-# config.py
 from zhmm import *
 TORTOISE_ORM = {
     'connections': {

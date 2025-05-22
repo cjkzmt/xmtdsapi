@@ -8,8 +8,26 @@ class User(Model):#操作用户
     name = fields.CharField(max_length=32, index=True, description="用户名")
     password = fields.CharField(max_length=32,default="123456", description="密码")
     number = fields.CharField(max_length=32, description="编号")
+    portrait=fields.CharField(max_length=255, null=True, description="头像")
     status = fields.CharField(max_length=32, default="Active", description="状态")
     update = fields.DatetimeField(auto_now_add=True, description="录入日期")
+
+
+class Menu(Model):  # 菜单
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, description="菜单名")
+    description = fields.CharField(max_length=255,null=True, default=None, description="描述")
+    href = fields.CharField(max_length=255,null=True, default=None, description="链接")
+    icon = fields.CharField(max_length=255,null=True, default=None, description="图标")
+    level = fields.IntField(default=0,description="菜单等级")
+    orderNum = fields.IntField(default=0, description="排序")
+    show = fields.BooleanField(default=True, description="是否显示")
+    Parent = fields.ForeignKeyField("models.Menu", related_name="parent", null=True, default=None, description="父级菜单")  
+    createdBy = fields.ForeignKeyField("models.User", related_name="createdby", description="创建人")
+    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
+    operator = fields.ForeignKeyField("models.User", related_name="operator", description="操作人")
+    updatedTime = fields.DatetimeField(auto_now_add=True, description="更新操作日期")
+
 class Platform(Model):#新媒体平台名
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, description="新媒体平台名")
