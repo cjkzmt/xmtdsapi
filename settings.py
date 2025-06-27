@@ -1,4 +1,3 @@
-# config.py
 from zhmm import *
 TORTOISE_ORM = {
     'connections': {
@@ -11,8 +10,10 @@ TORTOISE_ORM = {
                 'password': PASSWORD,
                 'database': DATABASE,
                 'charset': 'utf8mb4',
+                "pool_recycle": 3600,  # 每隔1小时回收连接
+                "connect_timeout": 30,  # 连接超时时间
                 'minsize': 0,
-                'maxsize': 5,
+                'maxsize': 10,
                 'echo': True,
             }
         }
