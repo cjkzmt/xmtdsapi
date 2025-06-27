@@ -10,7 +10,7 @@ outh2_scheme=OAuth2PasswordBearer(tokenUrl="token")
 ACCESS_TOKEN_EXPIRE_MINUTES=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 ALGORITHM=os.getenv("ALGORITHM", "HS256")
 SECRET_KEY=os.getenv("SECRET_KEY", "dac0dae442692f77885fd9ff411a8cc2c822c9ac065a47439e3364c66d81cf54")
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))  # 默认 7 天
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7")) 
 
 def create_user_token(data: dict):
     # 复制原始数据
@@ -98,6 +98,19 @@ def get_new_access_token(refresh_token: str):
     except Exception as e:
         raise ValueError(f"无法生成新的 access_token: {str(e)}")
 
+import hashlib
+def generate_short_str(url, length=6):
+    hash_obj = hashlib.md5(url.encode())
+    hash_hex = hash_obj.hexdigest()
+    base62_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    hash_int = int(hash_hex, 16)
+    short_url = ""
+    while hash_int > 0 and len(short_url) < length:
+        hash_int, idx = divmod(hash_int, len(base62_chars))
+        short_url = base62_chars[idx] + short_url
+    return short_url.zfill(length)
+
+
 
 if __name__ == "__main__":
     # 测试
@@ -107,5 +120,5 @@ if __name__ == "__main__":
     # refresh_token=token_data.get("refresh_token")
     # print(refresh_token)
     # print(token_data.get("expires_in"))
-
-    print(get_new_access_token("refresh_token"))
+    token='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJleHAiOjE3NTA2NTM0MDAsInRva2VuX3R5cGUiOiJCZWFyZXIiLCJleHBpcmVzX2luIjo5MDB9.I48jaWIOmiEiF08toYOLd7OKSjpIcwsagBoaFzY66Gw'
+    print(get_user_token(token))
