@@ -8,7 +8,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # print("Request Headers:", request.headers)
         # 排除不需要验证 Token 的路径
-        if not request.url.path.startswith("/api/") or request.url.path in ["/api/user/login", "/api/user/refresh_token","/api/phone/Verify"]:
+        if not request.url.path.startswith("/api/") or request.url.path in ["/api/user/login", "/api/user/refresh_token","/api/phone/Verify","/api/computer/Verify"]:
             return await call_next(request)
         
         # 需要验证 Token 的路径

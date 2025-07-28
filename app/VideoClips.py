@@ -3,71 +3,92 @@ from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_fixed
 from time import sleep
 from typing import Optional,List,Union, Dict
-from .response_model import ResponseModel
+from .response_model import *
 from .models import *
 from .auth import *
 from tortoise.query_utils import Prefetch
 import tortoise.exceptions
-
+from tortoise.transactions import in_transaction
+from datetime import datetime
 VideoClips_api = APIRouter()
 
-class VideoClipsin(BaseModel):
-    id: Optional[int] = None
-    name:Optional[str] = None
-    status: Optional[str] = None
-    url: Optional[str] = None
-    update: Optional[str] = None
+class QueryCondition(Condition):
+    name: Optional[str] = None
 
-@VideoClips_api.post("/saveOrUpdate", summary='添加或更改', description='功能描述')
-async def saveOrUpdate(VideoClips_in: VideoClipsin):
-    if VideoClips_in.id is None:
+class Item(BaseModel):
+    id: Optional[int] = None
+    name: Optional[str] = None
+    clipsum: Optional[int] = None
+    createdTime: Optional[str] = None
+    status: Optional[str] = None
+
+class QueryResult(Result):
+    records: List[Item]
+
+@VideoClips_api.post("/getVideoClipsPages", summary='分页查询用户数据', description='功能描述')
+async def get_VideoClips_pages(request: Request):
+    async with in_transaction():
+        data = await parse_request_body(request, QueryCondition)
+        print(data)
+        query = VideoClips.filter()
+        query = condition(data,query)
+        total = await query.count()
+        offset = (data.currentPage - 1) * data.pageSize
+        iteams = await query.offset(offset).limit(data.pageSize)
+        iteams_info = [
+        Item(
+            id=iteam.id,
+            name=iteam.name,
+            clipsum=iteam.clipsum,
+            createdTime=str(iteam.createdTime),
+            status=iteam.status,
+            ) for iteam in iteams
+        ]
+        pages=(total + data.pageSize - 1) // data.pageSize if total > 0 else 0
+        query_result = QueryResult(
+            current=data.currentPage,
+            hitcount=True,
+            optimizeCountSql=False,
+            orders=[],
+            pages=pages,
+            records=iteams_info,
+            searchCount=True,
+            size=data.pageSize,
+            total=total
+        )
+        return ResponseModel(
+            code="000000",
+            mesg="操作成功",
+            time=str(datetime.now()),
+            data=query_result
+    )
+
+@VideoClips_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
+async def addVideoClips(request: Request):
+    async with in_transaction():
+        VideoClips_in = await parse_request_body(request, Item)
+        print(VideoClips_in)
+        if VideoClips_in.id:
+            VideoClipsing = await VideoClips.get(id=VideoClips_in.id)
+            if VideoClips_in.name:
+                VideoClipsing.name = VideoClips_in.name
+            if VideoClips_in.clipsum and VideoClips_in.clipsum>0:
+                VideoClipsing.clipsum = VideoClips_in.clipsum
+            if VideoClips_in.status:
+                VideoClipsing.status = VideoClips_in.status
+            await VideoClipsing.save()
+            return ResponseModel(code="000000", mesg="更新成功", time=str(datetime.now()), data=True)
         try:
-            VideoClipsing = await TopicCopy.get(name=VideoClips_in.name)
+            await TopicCopy.get(name=VideoClips_in.name)
             return ResponseModel[str](
             code="000001",
             mesg="添加失败",
             time=str(datetime.now()),
-            data=f"文案已存在,{VideoClips_in.name}"
-        )
-        except:
-            pass
-        VideoClipsing = await VideoClips.create(name=VideoClips_in.name,url=VideoClips_in.url)
-        return ResponseModel[str](
-        code="000000",
-        mesg="创建成功",
-        time=str(datetime.now()),
-        data=VideoClipsing.name
-    )
-    VideoClipsing = await VideoClips.get(id=VideoClips_in.id)
-    if VideoClips_in.url is not None:
-        VideoClipsing.url=VideoClips_in.url
-    if VideoClips_in.status is not None:
-        VideoClipsing.status=VideoClips_in.status
-    await VideoClipsing.save()
-    return ResponseModel[str](
-        code="000000",
-        mesg="修改成功",
-        time=str(datetime.now()),
-        data=VideoClipsing.name
-    )
+            data=f"已存在,{VideoClips_in.name}")
+        except:pass
+        await VideoClips.create(name=VideoClips_in.name)
+        return ResponseModel(code="000000", mesg="添加成功", time=str(datetime.now()), data=True)
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-async def safe_query(filters):
-    return await VideoClips.filter(**filters).values() 
-
-@VideoClips_api.get("/", summary='查询 VideoClips', description='根据 id, url, Author_id, update, status 查询')
-async def query_url_author(VideoClips_in: VideoClipsin = Depends()):
-    filters = {k: v for k, v in VideoClips_in.model_dump().items() if v is not None}
-    result = await safe_query(filters)
-    return ResponseModel(
-    code="000000",
-    mesg="查询 VideoClips 成功",
-    time=str(datetime.now()),
-    data=result
-    )
-
-
-
-
-
-
+@VideoClips_api.delete("/{id}",summary='删除指定内容',description='功能描述')
+async def delete_iteam(id: int):
+    return await delete(VideoClips, {"id": id}, "删除成功")
