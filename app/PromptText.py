@@ -3,62 +3,90 @@ from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_fixed
 from time import sleep
 from typing import Optional,List,Union, Dict
-from .response_model import ResponseModel
+from .response_model import *
 from .models import *
 from .auth import *
 from tortoise.query_utils import Prefetch
-
+import tortoise.exceptions
+from tortoise.transactions import in_transaction
+from datetime import datetime
 PromptText_api = APIRouter()
 
-class PromptTextin(BaseModel):
+class QueryCondition(Condition):
+    text: Optional[str] = None
+
+class Item(BaseModel):
     id: Optional[int] = None
     text: Optional[str] = None
-    status : Optional[str] = None
+    createdTime: Optional[str] = None
+    status: Optional[str] = None
 
-@PromptText_api.post("/saveOrUpdate", summary='添加或更改', description='功能描述')
-async def saveOrUpdate(PromptText_in: PromptTextin):
-    if PromptText_in.id is None:
+class QueryResult(Result):
+    records: List[Item]
+
+@PromptText_api.post("/getPromptTextPages", summary='分页查询用户数据', description='功能描述')
+async def get_PromptText_pages(request: Request):
+    async with in_transaction():
+        data = await parse_request_body(request, QueryCondition)
+        print(data)
+        query = PromptText.filter()
+        query = condition(data,query)
+        total = await query.count()
+        offset = (data.currentPage - 1) * data.pageSize
+        iteams = await query.offset(offset).limit(data.pageSize)
+        iteams_info = [
+        Item(
+            id=iteam.id,
+            text=iteam.text,
+            createdTime=str(iteam.createdTime),
+            status=iteam.status,
+            ) for iteam in iteams
+        ]
+        pages=(total + data.pageSize - 1) // data.pageSize if total > 0 else 0
+        query_result = QueryResult(
+            current=data.currentPage,
+            hitcount=True,
+            optimizeCountSql=False,
+            orders=[],
+            pages=pages,
+            records=iteams_info,
+            searchCount=True,
+            size=data.pageSize,
+            total=total
+        )
+        
+        return ResponseModel(
+            code="000000",
+            mesg="操作成功",
+            time=str(datetime.now()),
+            data=query_result
+    )
+
+
+@PromptText_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
+async def addPromptText(request: Request):
+    async with in_transaction():
+        PromptText_in = await parse_request_body(request, Item)
+        print(PromptText_in)
+        if PromptText_in.id:
+            iteam = await PromptText.get(id=PromptText_in.id)
+            if PromptText_in.text:
+                iteam.text = PromptText_in.text
+            if PromptText_in.status:
+                iteam.status = PromptText_in.status
+            await iteam.save()
+            return ResponseModel(code="000000", mesg="更新成功", time=str(datetime.now()), data=True)
         try:
-            PromptTexting = await TopicCopy.get(text=PromptText_in.text)
+            await TopicCopy.get(text=PromptText_in.text)
             return ResponseModel[str](
             code="000001",
-            mesg="添加PromptText失败",
+            mesg="添加失败",
             time=str(datetime.now()),
-            data=f"文案已存在,{PromptText_in.id}"
-        )
-        except:
-            pass
-        PromptTexting = await PromptText.create(text=PromptText_in.text)
-        return ResponseModel[str](
-        code="000000",
-        mesg="创建PromptText成功",
-        time=str(datetime.now()),
-        data=PromptTexting.id
-    )
-    PromptTexting = await PromptText.get(id=PromptText_in.id)
-    if PromptText_in.text is not None:
-        PromptTexting.text=PromptText_in.text
-    if PromptText_in.status is not None:
-        PromptTexting.status=PromptText_in.status
-    await PromptTexting.save()
-    return ResponseModel[int](
-        code="000000",
-        mesg="修改PromptText成功",
-        time=str(datetime.now()),
-        data=PromptTexting.id
-    )
+            data=f"已存在,{PromptText_in.text}")
+        except:pass
+        await PromptText.create(text=PromptText_in.text)
+        return ResponseModel(code="000000", mesg="添加成功", time=str(datetime.now()), data=True)
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-async def safe_query(filters):
-    return await PromptText.filter(**filters).values() 
-
-@PromptText_api.get("/", summary='查询 PromptText', description='根据 id, url, Author_id, update, status 查询')
-async def query_url_author(PromptText_in: PromptTextin = Depends()):
-    filters = {k: v for k, v in PromptText_in.model_dump().items() if v is not None}
-    result = await safe_query(filters)
-    return ResponseModel(
-        code="000000",
-        mesg="获取 PromptText 成功",
-        time=str(datetime.now()),
-        data=result
-    )
+@PromptText_api.delete("/{id}",summary='删除指定内容',description='功能描述')
+async def delete_iteam(id: int):
+    return await delete(PromptText, {"id": id}, "删除成功")
