@@ -25,7 +25,7 @@ class User(Model):#操作用户
 
 class TypeText (Model):#文案类型
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="文案类型名")
+    name = fields.CharField(max_length=255, description="文案类型名", unique=True)
     description = fields.CharField(max_length=255, description="类型描述")
     topicSW = fields.CharField(max_length=32, default="ENABLE", description="选题开关")
     copySW = fields.CharField(max_length=32, default="ENABLE", description="样本开关")
@@ -34,38 +34,31 @@ class TypeText (Model):#文案类型
     
 class PromptText(Model):#提示词文案
     id = fields.IntField(pk=True)
-    text = fields.TextField(description="提示词") 
+    text = fields.CharField(max_length=760,description="提示词", unique=True) 
     createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
-
-class UrlText(Model):#文案链接
-    id = fields.IntField(pk=True)
-    url = fields.CharField(max_length=255, description="链接")
-    Author= fields.ForeignKeyField("models.Author",null=True, default=None, related_name="urltexts", description="作者")
-    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
-    status = fields.CharField(max_length=32, default="Unfinished", description="状态")
-
+    
 class TopicCopy(Model):
     id = fields.IntField(pk=True)
-    number = fields.CharField(max_length=255, description="编号")
-    text = fields.TextField(description="文案")
-    topicnum=fields.BigIntField(null=True, default=0,description="选题数")
-    copynum=fields.BigIntField(null=True, default=0,description="样本数")
+    text = fields.CharField(max_length=760,null=True,default=None,description="文案", unique=True)
+    url = fields.CharField(max_length=64,null=True,default=None, description="链接")
+    Author= fields.ForeignKeyField("models.Author",null=True, default=None, related_name="topiccopy_author", description="作者")
     TypeText = fields.ForeignKeyField("models.TypeText",null=True,default=None,related_name="topiccopy_typetexts",description="文案类型")
-    Source_description = fields.CharField(max_length=32,null=True, default=None, description="来源描述")
-    Source_id = fields.CharField(max_length=32,null=True,default=None,  description="来源文案ID")
+    topicnum=fields.BigIntField(default=0,description="选题数")
+    copynum=fields.BigIntField(default=0,description="样本数")
     createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
 
 class Platform(Model):#新媒体平台名
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="新媒体平台名")
+    name = fields.CharField(max_length=255, description="新媒体平台名", unique=True)
     sort = fields.IntField(default=0, description="排序")
+    publish=fields.CharField(max_length=32, default="DISABLE", description="状态")
 
 class Author(Model):#作者
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, description="作者名字")
-    number = fields.CharField(max_length=255,null=True, default=None,description="作者号")
+    number = fields.CharField(max_length=255,null=True, default=None,description="作者号", unique=True)
     url = fields.CharField(max_length=255, description="链接")
     urlnum = fields.IntField(default=0, description="链接数量")
     Platform =  fields.ForeignKeyField("models.Platform", related_name="authors", description="关联的新媒体平台")
@@ -75,66 +68,41 @@ class Author(Model):#作者
 
 class VideoTemplate(Model):#视频模板
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="模板名")
-    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期") 
-
-class Computer(Model):
-    id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="计算机名")
-    unique_id=fields.CharField(max_length=255, description="唯一标识")
-    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
+    name = fields.CharField(max_length=255, description="模板名", unique=True)
     createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期") 
 
 class Font(Model):
-    id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="字体名")
-    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
-    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
+    id = fields.IntField(pk=True) 
+    name = fields.CharField(max_length=255, description="字体名", unique=True)
     url=fields.CharField(max_length=255,null=True, default=None, description="字体路径")
+    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
+    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
 
 class Music(Model):
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="音乐名")
-    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
-    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
+    name = fields.CharField(max_length=255, description="音乐名", unique=True)
+    duration=fields.IntField(null=True, default=None,description="Music")
     url=fields.CharField(max_length=255,null=True, default=None, description="音乐路径")
+    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
+    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
 
-class VoiceOver(Model):
+class Over(Model):#配音
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="配音名")
+    name = fields.CharField(null=True, default=None,max_length=255, description="配音名")
+    filename= fields.CharField(max_length=255, description="配音文件名", unique=True)
+    sex = fields.CharField(max_length=32,null=True, default=None, description="性别")
+    speed = fields.FloatField(null=True, default=1.2, description="语速")
+    url=fields.CharField(max_length=255,null=True, default=None, description="配音路径")
     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
     createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
-    url=fields.CharField(max_length=255,null=True, default=None, description="音乐路径")
-
+    
 class VideoClips (Model):#视频片段
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="素材名")
+    name = fields.CharField(max_length=255, description="素材名", unique=True)
+    clipsum = fields.IntField(description="片段数量")
     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
     createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
-    url=fields.CharField(max_length=255,null=True, default=None, description="音乐路径")
-
-class Script(Model):#视频脚本
-    id = fields.IntField(pk=True)
-    VideoTemplate = fields.ForeignKeyField("models.VideoTemplate",null=True, default=None, related_name="script_videotemplate", description="预设模板")
-    Template_id = fields.CharField(max_length=255,null=True, default=None, description="模板编号")
-    batch = fields.IntField(description="批次")
-    status= fields.CharField(max_length=32, default="Unfinished", description="状态")
-    number = fields.CharField(max_length=32, description="文案编号")
-    title = fields.TextField(null=True, default=None,description="标题描述")
-    covercopy = fields.TextField(null=True, default=None, description="封面文案")
-    visualcopy = fields.TextField(null=True, default=None,description="画面文案")
-    subtitlecopy = fields.TextField(null=True, default=None,description="字幕文案")
-    displaysubtitles = fields.TextField(null=True, default=None,description="显示字幕")
-    subtitlepronunciation = fields.TextField(null=True, default=None,description="字幕读音")
-    VideoClips=fields.ForeignKeyField("models.VideoClips",null=True, default=None, related_name="scripts_videoclips", description="视频素材")
-    Font= fields.ForeignKeyField("models.Font",null=True, default=None, related_name="scripts_font", description="视频字体")
-    Music=  fields.ForeignKeyField("models.Music",null=True, default=None, related_name="scripts_music", description="视频背景音乐")
-    VoiceOver= fields.ForeignKeyField("models.VoiceOver",null=True, default=None, related_name="scripts_voiceover", description="视频配音")
-    publishtime = fields.CharField(max_length=255,null=True, default=None, description="发布时间")
-    operator = fields.ForeignKeyField("models.User",null=True, default=None,  related_name="scripts_operator", description="操作人")
-    Computer = fields.ForeignKeyField("models.Computer",null=True, default=None, related_name="script_computer", description="操作电脑")
-    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
-    updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
+    updatedTime = fields.DatetimeField(auto_now=True, description="更新日期")
 
 class Menu(Model):  # 菜单
     id = fields.IntField(pk=True)
@@ -166,9 +134,11 @@ class ReleasePlan(Model):#发布计划
     hour= fields.IntField(default=0, description="小时")
     minute= fields.IntField(default=0,description="分钟")
 
-class StartTime(Model):#项目初始时间
+class SystemInfo(Model):#系统信息
     id = fields.IntField(pk=True)
-    time= fields.DatetimeField(null=True, default=None,  description="项目初始时间")
+    name = fields.CharField(max_length=255, description="名称", unique=True)
+    value = fields.CharField(max_length=255, description="值")
+    createdTime=  fields.DatetimeField(auto_now_add=True, description="录入日期")
 
 class Phone(Model): #手机
     id = fields.IntField(pk=True)
@@ -177,13 +147,25 @@ class Phone(Model): #手机
     Brand= fields.CharField(max_length=255,default=None, null=True, description="品牌名")
     Owner= fields.CharField(max_length=255,default=None, null=True, description="手机所有人")
     sort = fields.IntField(default=0, description="排序")
-    deviceid= fields.CharField(max_length=255,default=None, null=True, description="设备id")
+    deviceid= fields.CharField(max_length=255,default=None, null=True, description="设备id", unique=True)
     createdTime=  fields.DatetimeField(auto_now_add=True, description="录入日期")
+    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
+
+class Computer(Model):#电脑
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, description="计算机名")
+    uniqueId=fields.CharField(max_length=255,default=None, null=True, description="唯一标识", unique=True)
+    createtext= fields.CharField(max_length=32, default="DISABLE", description="制作文案")
+    createvideo= fields.CharField(max_length=32, default="DISABLE", description="制作视频")
+    createclip= fields.CharField(max_length=32, default="DISABLE", description="制作素材")
+    publishvideo= fields.CharField(max_length=32, default="DISABLE", description="发布视频")
+    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期") 
     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
 
 class PNumber(Model):#手机号码
     id = fields.IntField(pk=True)
-    number = fields.BigIntField(description="手机号码")
+    number = fields.BigIntField(description="手机号码", unique=True)
+    code=fields.IntField(default=None, null=True,  description="编号")
     rent = fields.IntField(default=None, null=True,  description="月租")
     Owner =  fields.CharField(max_length=32, default=None, null=True, description="所有人")
     createdTime = fields.DatetimeField(auto_now_add=True, description="创建日期")
@@ -193,26 +175,58 @@ class PNumber(Model):#手机号码
 class Certifier (Model): #认证人
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, description="认证人名字")
-    idnumber = fields.CharField(max_length=255,default=None, null=True, description="身份证号")
+    idnumber = fields.CharField(max_length=255,default=None, null=True, description="身份证号", unique=True)
     Owner =  fields.CharField(max_length=32, default=None, null=True, description="所有人")
     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
     createdTime = fields.DatetimeField(auto_now_add=True, description="创建日期")
  
-class Video(Model):#视频
+class TypeVideo(Model):#视频样式
     id = fields.IntField(pk=True)
-    number = fields.CharField(max_length=255, description="视频编号")
-    Script=fields.ForeignKeyField("models.Script", default=None, null=True,related_name="videos", description="脚本")
-    name = fields.CharField(max_length=255,default=None, null=True, description="视频文件名")
-    path = fields.CharField(max_length=255,default=None, null=True, description="视频文件路径")
+    name = fields.CharField(max_length=255, description="视频样式名")
+    videoheight= fields.IntField(default=1280, description="视频高度")
+    videowidth= fields.IntField(default=720, description="视频宽度")
+
+class TypeCover(Model):#封面样式
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, description="封面样式名")
+    fixedtitle= fields.CharField(max_length=255, default=None, null=True, description="固定标题")
+
+class TypeSubtitle(Model):#字幕样式
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, description="字幕样式名")
+    fontsize= fields.IntField(default=1280, description="字幕字号")
+    fontcolor= fields.CharField(max_length=32, description="字幕字色")
+
+class TeamOwner(Model):#团队拥有者
+    id = fields.IntField(pk=True)
+    shorthand=fields.CharField(max_length=32, default=None, null=True, description="简称")
+    name = fields.CharField(max_length=65, default=None, null=True, description="账号拥有者")
+    alias=fields.CharField(max_length=128, default=None, null=True, description="别名")
+    Title=fields.CharField(max_length=65, default=None, null=True, description="称号")
+    number = fields.BigIntField(description="手机号码", default=None, null=True, unique=True)
+    email=fields.CharField(max_length=255, default=None, null=True, description="邮箱")
+    path=fields.CharField(max_length=255, default=None, null=True, description="文件名")
+    address=fields.CharField(max_length=255, default=None, null=True, description="地址")
+    note=fields.CharField(max_length=400, default=None, null=True, description="备注")
+    status=fields.CharField(max_length=32, default="ENABLE", description="状态")
+    createdTime = fields.DatetimeField(auto_now_add=True, description="创建日期")
+
+class AccountTeam(Model):
+    id = fields.IntField(pk=True)
+    number = fields.IntField(description="组号", unique=True)
+    scope=fields.CharField(max_length=255, default=None, null=True, description="业务范围")
+    TeamOwner=fields.ForeignKeyField("models.TeamOwner", related_name="team_owner", default=None, null=True, description="团队拥有者")
+    Phone=fields.ForeignKeyField("models.Phone",default=None, null=True,  related_name="team_phone", description="所在手机")
     createdTime = fields.DatetimeField(auto_now_add=True, description="制作日期")
-    status = fields.CharField(max_length=32, default="Unfinished", description="状态")
-    updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
+    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
+    TypeVideo=fields.ForeignKeyField("models.TypeVideo",default=None, null=True,  related_name="team_typevideo", description="所在视频样式")
+    TypeCover=fields.ForeignKeyField("models.TypeCover",default=None, null=True,  related_name="team_typecover", description="所在封面样式")
+    TypeSubtitle=fields.ForeignKeyField("models.TypeSubtitle",default=None, null=True,  related_name="team_typesubtitle", description="所在字幕样式")
 
 class Account(Model):
     id = fields.IntField(pk=True)
-    Phone=fields.ForeignKeyField("models.Phone",default=None, null=True,  related_name="accounts_phone_number", description="所在手机")
-    Platform = fields.ForeignKeyField("models.Platform", related_name="accounts", default=None, null=True, description="新媒体平台")
-    team=fields.IntField(default=None, null=True, description="组号")
+    AccountTeam=fields.ForeignKeyField("models.AccountTeam",default=None, null=True,  related_name="team_account", description="所在组")
+    platform = fields.ForeignKeyField("models.Platform", related_name="accounts", default=None, null=True, description="新媒体平台")
     name = fields.CharField(max_length=255, default=None, null=True, description="名字")
     number = fields.CharField(max_length=255, default=None, null=True, description="账号ID")
     isDel=fields.BooleanField(default=False)
@@ -225,7 +239,104 @@ class Account(Model):
     updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
     createdTime=  fields.DatetimeField(auto_now_add=True, description="录入日期")
 
+class AiApi(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=32, description="名称")
+    description=fields.CharField(max_length=225, default="", description="描述")
+    url=fields.CharField(max_length=225,default=None, null=True, description="官网")
+    port=fields.IntField(default=None, null=True,description="端口")
+    model=fields.CharField(max_length=32, default=None, null=True, description="模型")
+    note=fields.CharField(max_length=225, default=None, null=True, description="备注")
+    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
+    createdTime=  fields.DatetimeField(auto_now_add=True, description="录入日期")
 
+class ApiToken(Model):
+    id = fields.IntField(pk=True)
+    AiApi=fields.ForeignKeyField("models.AiApi", related_name="api_api", default=None, null=True, on_delete=fields.CASCADE, description="Ai")
+    PNumber=fields.ForeignKeyField("models.PNumber", related_name="api_pnumber", default=None, null=True, description="电话号码")
+    token = fields.CharField(max_length=1024, default=None, null=True, description="token") 
+    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
+    createdTime=  fields.DatetimeField(auto_now_add=True, description="录入日期")
+
+class OllamaUrl(Model):
+    id = fields.IntField(pk=True)
+    url=fields.CharField(max_length=32, default=None, null=True, description="地址", unique=True)
+    status = fields.CharField(max_length=64, default="DISABLE", description="状态")
+    isDel=fields.BooleanField(default=False)
+
+class OllamaModel(Model):
+    id = fields.IntField(pk=True)
+    OllamaUrl=fields.ForeignKeyField("models.OllamaUrl", related_name="ollama_ollamaurl", description="ollama地址", on_delete=fields.CASCADE)
+    model=fields.CharField(max_length=128, default=None, null=True, description="模型")
+    status = fields.CharField(max_length=32, default="ENABLE", description="状态")
+
+class Script(Model):#视频脚本
+    id = fields.IntField(pk=True)
+    topic=fields.ForeignKeyField("models.TopicCopy",null=True, default=None, related_name="script_topic", description="选题", on_delete=fields.CASCADE)
+    copy=fields.ForeignKeyField("models.TopicCopy",null=True, default=None, related_name="script_tcopy", description="样本", on_delete=fields.CASCADE)
+    AccountTeam=fields.ForeignKeyField("models.AccountTeam",null=True, default=None, related_name="script_accountteam", description="发布账号组", on_delete=fields.CASCADE)
+    PromptText=fields.ForeignKeyField("models.PromptText",null=True, default=None, related_name="script_prompttext", description="提示语", on_delete=fields.CASCADE)
+    ReleasePlan= fields.ForeignKeyField("models.ReleasePlan", related_name="task_plan", default=None, null=True, description="发布计划")
+    publishtime = fields.DatetimeField(default=None, null=True, description="发布日期")
+    Music=  fields.ForeignKeyField("models.Music",null=True, default=None, related_name="scripts_music", description="视频背景音乐", on_delete=fields.CASCADE)
+    Over= fields.ForeignKeyField("models.Over",null=True, default=None, related_name="scripts_Over", description="视频配音", on_delete=fields.CASCADE)
+    Font = fields.ForeignKeyField("models.Font",null=True, default=None, related_name="scripts_font", description="视频字体", on_delete=fields.CASCADE)
+    VideoTemplate = fields.ForeignKeyField("models.VideoTemplate",null=True, default=None, related_name="script_videotemplate", description="预设模板")
+    videopath = fields.CharField(max_length=64,default=None, null=True, description="视频文件路径")
+    createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
+    linestatus = fields.CharField(max_length=16,null=True, default=None,description="脚本状态")
+    copystatus = fields.CharField(max_length=16,null=True, default=None,description="视频文案状态")
+    videostatus = fields.CharField(max_length=16,null=True, default=None,description="视频状态")
+    operator = fields.ForeignKeyField("models.User",null=True, default=None,  related_name="scripts_operator", description="操作人")
+    drafline=fields.TextField(null=True, default=None, description="文案初稿")
+    line = fields.CharField(max_length=760,null=True, default=None,description="脚本文案", unique=True)
+    draftitle = fields.TextField(null=True, default=None,description="描述初稿")
+    title = fields.TextField(null=True, default=None,description="标题描述")
+    drafcover = fields.TextField(null=True, default=None, description="封面初稿")
+    cover = fields.TextField(null=True, default=None, description="封面文案")
+    visual = fields.TextField(null=True, default=None,description="画面文案")
+    subtitle = fields.TextField(null=True, default=None,description="显示字幕")
+    reading = fields.TextField(null=True, default=None,description="字幕读音")
+    videoname = fields.CharField(max_length=64,default=None, null=True, description="视频文件名")
+    douyin= fields.CharField(max_length=16,  description="抖音发布状态")
+    sph= fields.CharField(max_length=16,  description="视频号发布状态")
+    kuaishou= fields.CharField(max_length=16,  description="快手发布状态")
+    xiaohongshu= fields.CharField(max_length=16,  description="小红书发布状态")
+    status = fields.CharField(max_length=32, default="脚本文案待制作", description="状态")
+    Computer = fields.ForeignKeyField("models.Computer",null=True, default=None, related_name="script_computer", description="操作电脑")
+    updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
+
+    # draflineModel=fields.ForeignKeyField("models.OllamaModel",related_name="draft_line_Model", null=True, default=None, description="模型")
+    # draftitleModel=fields.ForeignKeyField("models.OllamaModel",related_name="draft_title_Model", null=True, default=None, description="模型")
+    # drafcoverModel=fields.ForeignKeyField("models.OllamaModel",related_name="draf_cover_Model", null=True, default=None, description="模型")
+    # titleModel=fields.ForeignKeyField("models.OllamaModel",related_name="title_Model", null=True, default=None, description="模型")
+    # coverModel=fields.ForeignKeyField("models.OllamaModel",related_name="cover_Model", null=True, default=None, description="模型")
+    # subtitleModel=fields.ForeignKeyField("models.OllamaModel",related_name="subtitle_Model", null=True, default=None, description="模型")
+    # lineModel=fields.ForeignKeyField("models.OllamaModel",related_name="line_Model", null=True, default=None, description="模型")
+
+
+    
+   
+    
+    
+    
+
+
+# class Video(Model):#视频
+#     id = fields.IntField(pk=True)
+#     Script = fields.ForeignKeyField('models.Script', related_name='task', default=None, null=True, unique=True)
+#     
+#     status = fields.CharField(max_length=32, default="Unfinished", description="状态")
+#     createdTime = fields.DatetimeField(auto_now_add=True, description="制作日期")
+#     updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
+
+# class Task(Model):
+#     id= fields.IntField(pk=True)
+
+#     Script= fields.ForeignKeyField("models.Script", related_name="task", default=None, null=True, description="脚本")
+   
+#     status= fields.CharField(max_length=32, default="DISABLE", description="状态")
+    
 #用户信息=============================================
 # class Fans(Model):#粉丝
 #     id = fields.IntField(pk=True)

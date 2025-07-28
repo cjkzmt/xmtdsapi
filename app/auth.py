@@ -28,6 +28,7 @@ def create_user_token(data: dict):
     refresh_token_expire_time = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     refresh_token_payload = {
         "user_id": data["user_id"],
+        "Role": data["Role"],
         "exp": refresh_token_expire_time,
         "token_type": "refresh"
     }
@@ -42,7 +43,8 @@ def create_user_token(data: dict):
         "token_type": to_encode["token_type"],
         "refresh_token": refresh_token,
         "expires_in": to_encode["expires_in"],
-        "user_id": to_encode.get("user_id")  # 假设 user_id 在 data 中已提供
+        "user_id": to_encode.get("user_id"),  # 假设 user_id 在 data 中已提供
+        "Role": to_encode.get("Role")  # 假设 user_id 在 data 中已提供
     })
 def get_user_token(token:str):
     try:
@@ -89,9 +91,10 @@ def get_new_access_token(refresh_token: str):
         # 从 payload 中提取必要的数据，但不包括 refresh_token
         # print(payload)
         id = payload.get("user_id")
+        Role = payload.get("Role")
         
         # 生成新的 access_token
-        new_access_token = create_user_token(data={"user_id": id})
+        new_access_token = create_user_token(data={"user_id": id,"Role":Role})
         
         # 将 JSON 字符串转换为字典返回
         return json.loads(new_access_token)
@@ -115,10 +118,10 @@ def generate_short_str(url, length=6):
 if __name__ == "__main__":
     # 测试
     
-    # access_token = create_user_token(data={"user_id": "1"})
-    # token_data = json.loads(access_token)
-    # refresh_token=token_data.get("refresh_token")
-    # print(refresh_token)
+    access_token = create_user_token(data={"user_id": "1",'Role':'user' })
+    token_data = json.loads(access_token)
+    refresh_token=token_data.get("refresh_token")
+    print(refresh_token)
     # print(token_data.get("expires_in"))
-    token='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJleHAiOjE3NTA2NTM0MDAsInRva2VuX3R5cGUiOiJCZWFyZXIiLCJleHBpcmVzX2luIjo5MDB9.I48jaWIOmiEiF08toYOLd7OKSjpIcwsagBoaFzY66Gw'
+    token=refresh_token
     print(get_user_token(token))
