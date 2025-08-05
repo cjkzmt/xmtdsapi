@@ -20,11 +20,14 @@ class QueryCondition(Condition):
 
 class Item(BaseModel):
     id: Optional[int] = None
-    urlId: Optional[int] = None
+    url_id: Optional[int] = None
     url: Optional[str] = None
     model: Optional[str] = None
     status: Optional[str] = None
     isDel : Optional[bool] = False
+class Item(InItem):
+    createdTime: Optional[str] = None
+
 
 class QueryResult(Result):
     records: List[Item]
@@ -65,7 +68,7 @@ async def get_Ollama_pages(request: Request):
         iteams_info = [
         Item(
                 id=Ollama.id,
-                urlId=Ollama.OllamaUrl_id,
+                url_id=Ollama.OllamaUrl_id,
                 url=Ollama.OllamaUrl.url if Ollama.OllamaUrl else None, 
                 model=Ollama.model,
                 status=Ollama.status,

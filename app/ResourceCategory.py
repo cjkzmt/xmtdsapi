@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_fixed
 from time import sleep
 from typing import Optional,List,Union, Dict
-from .response_model import ResponseModel
+from .response_model import *
 from .models import *
 from .auth import *
 from tortoise.query_utils import Prefetch
@@ -19,7 +19,7 @@ class ResourceCategoryItem(BaseModel):
     sort: int
     createdBy: Optional[str] = None
     createdTime: Optional[str] = None
-    operatorId: Optional[int] = None
+    operator_id: Optional[int] = None
     updatedBy: Optional[str] = None
     updatedTime: Optional[str] = None
 
@@ -35,7 +35,7 @@ async def getAll():
                 sort=ResourceCategory.sort,
                 createdBy=(await User.get(id=ResourceCategory.createdBy_id)).name,  # 获取用户名而非ID
                 createdTime=str(ResourceCategory.createdTime),
-                operatorId=ResourceCategory.operator_id if ResourceCategory.operator else None,
+                operator_id=ResourceCategory.operator_id if ResourceCategory.operator else None,
                 updatedBy=(await User.get(id=ResourceCategory.operator_id)).name if ResourceCategory.operator else None,
                 updatedTime=str(ResourceCategory.updatedTime),
             ) for ResourceCategory in resourcecategorys
@@ -87,10 +87,10 @@ async def getResourceCategory(id:int):
                 level=ResourceCategory.level,
                 orderNum=ResourceCategory.orderNum,
                 show=ResourceCategory.show,
-                parentId=ResourceCategory.parent_id if ResourceCategory.parent_id else None,
+                parent_id=ResourceCategory.parent_id if ResourceCategory.parent_id else None,
                 createdBy=(await User.get(id=ResourceCategory.createdBy_id)).name,
                 createdTime=str(ResourceCategory.createdTime),
-                operatorId=ResourceCategory.operator_id if ResourceCategory.operator_id else None,
+                operator_id=ResourceCategory.operator_id if ResourceCategory.operator_id else None,
                 updatedBy=(await User.get(id=ResourceCategory.operator_id)).name if ResourceCategory.operator_id else None,
                 updatedTime=str(ResourceCategory.updatedTime),
             )
@@ -101,13 +101,4 @@ async def getResourceCategory(id:int):
 
 @ResourceCategory_api.delete("/{id}",summary='删除指定内容',description='功能描述')
 async def deleteResourceCategory(id:int):
-    async with in_transaction():
-        try:
-            ResourceCategorying = await ResourceCategory.get(id=id)
-        except  Exception as e:
-            return ResponseModel(code="000001", mesg=str(e), time=str(datetime.now()), data=False)
-        try:
-            await ResourceCategorying.delete()
-            return ResponseModel(code="000000", mesg="删除成功", time=str(datetime.now()), data=True)
-        except Exception as e:
-            return ResponseModel(code="000002", mesg=str(e), time=str(datetime.now()), data=False)
+    return await delete(ResourceCategory, {"id": id}, "删除成功")

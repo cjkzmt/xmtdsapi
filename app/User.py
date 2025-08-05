@@ -15,7 +15,46 @@ from tortoise.transactions import in_transaction
 
 User_api = APIRouter()
 portraiturl= 'https://p9-flow-imagex-sign.byteimg.com/ocean-cloud-tos/image_skill/d43d8b27-7ab6-4e25-872c-81a99596cdea_1747727922613428843_origin~tplv-a9rns2rl98-image-dark-watermark.png?rk3s=b14c611d&x-expires=1779263922&x-signature=2ZAZigEWOL4lPbeA7WhpbDHbou0%3D'
-        
+
+class QueryCondition(BaseModel):
+    currentPage: Optional[int] = 1#// 查询的当前页码
+    pageSize: Optional[int] = 10#// 每页显示的记录数
+    userName: Optional[str] = None
+    phone: Optional[str] = None
+    id: Optional[int] = None
+    statCreateTime: Optional[str] = None#// 开始创建时间，用于筛选创建时间范围的起始时间
+    endCreateTime: Optional[str] = None#// 结束创建时间，用于筛选创建时间范围的结束时间
+class UserItem(BaseModel):
+    accountNonExpired: bool
+    accountNonLocked: bool
+    createdTime: Optional[str] = None  # 如 "2025-04-05T12:34:56Z"
+    credentialsNonExpired: bool
+    id: int
+    isDel: bool
+    name: str
+    password: str
+    phone: Optional[str] = None
+    portrait: Optional[str] = None
+    regIp: Optional[str] = None
+    status: str
+    updatedTime: Optional[str] = None
+class QueryResult(BaseModel):
+    current: int  # 当前页码
+    hitcount: bool  # 是否命中计数
+    optimizeCountSql: bool  # 是否优化计数SQL
+    orders: List  # 排序条件数组
+    pages: int  # 总页数
+    records: List[UserItem]  # 当前页的用户记录列表
+    searchCount: bool  # 是否进行搜索计数
+    size: int  # 每页显示的记录数
+    total: int  # 总记录数
+
+
+class LogoutResponse(BaseModel):
+    success: bool
+    state: int
+    message: str
+    content: str      
 class Userin(BaseModel):
     number:Optional[int] = None
     id: Optional[int] = None
@@ -69,11 +108,7 @@ async def refresh_token(refreshtoken: str = Query(...)):
                 'state': 401,
                 'content': None})
 
-class LogoutResponse(BaseModel):
-    success: bool
-    state: int
-    message: str
-    content: str
+
 @User_api.post("/logout", description="用户退出")
 async def logout(authorization: str = Header(...)):
     if not authorization: raise HTTPException(status_code=401, detail="未提供授权信息")
@@ -106,38 +141,7 @@ async def add(user_in: Userin):
     user = await User.create(name=user_in.name, password=user_in.password, number=user_in.number, status=user_in.status)
     return user_in
 
-class QueryCondition(BaseModel):
-    currentPage: Optional[int] = 1#// 查询的当前页码
-    pageSize: Optional[int] = 10#// 每页显示的记录数
-    userName: Optional[str] = None
-    phone: Optional[str] = None
-    userId: Optional[int] = None
-    statCreateTime: Optional[str] = None#// 开始创建时间，用于筛选创建时间范围的起始时间
-    endCreateTime: Optional[str] = None#// 结束创建时间，用于筛选创建时间范围的结束时间
-class UserItem(BaseModel):
-    accountNonExpired: bool
-    accountNonLocked: bool
-    createdTime: Optional[str] = None  # 如 "2025-04-05T12:34:56Z"
-    credentialsNonExpired: bool
-    id: int
-    isDel: bool
-    name: str
-    password: str
-    phone: Optional[str] = None
-    portrait: Optional[str] = None
-    regIp: Optional[str] = None
-    status: str
-    updatedTime: Optional[str] = None
-class QueryResult(BaseModel):
-    current: int  # 当前页码
-    hitcount: bool  # 是否命中计数
-    optimizeCountSql: bool  # 是否优化计数SQL
-    orders: List  # 排序条件数组
-    pages: int  # 总页数
-    records: List[UserItem]  # 当前页的用户记录列表
-    searchCount: bool  # 是否进行搜索计数
-    size: int  # 每页显示的记录数
-    total: int  # 总记录数
+
 
 @User_api.post("/getUserPages", summary='分页查询用户数据', description='功能描述')
 async def get_user_pages(request: Request):
@@ -158,8 +162,8 @@ async def get_user_pages(request: Request):
             query = query.filter(name=data.userName)
         if data.phone:
             query = query.filter(phone__icontains=data.phone)
-        if data.userId:
-            query = query.filter(id=data.userId)
+        if data.user_id:
+            query = query.filter(id=data.user_id)
         total = await query.count()
         users = await query.offset((0) * 1).limit(10)
         user_items = [
