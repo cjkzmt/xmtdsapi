@@ -10,20 +10,22 @@ from tortoise.query_utils import Prefetch
 import tortoise.exceptions
 from tortoise.transactions import in_transaction
 
-TypeCover_api = APIRouter()#平台
+NAME='关键词'
+
+Keyword_api = APIRouter()
 
 class Item(BaseModel):
     id: Optional[int] = None
-    name: Optional[str] = None
-    fixedtitle: Optional[str] = None
-@TypeCover_api.get("/getAll",summary='查找所有内容',description='功能描述')
+    text: Optional[str] = None
+    sort: Optional[int] = None
+
+@Keyword_api.get("/getAll",summary=f'查找所有{NAME}',description='功能描述')
 async def getAll(info: Item = Depends()):
-    return await GetAll(TypeCover,Item,info)
+    return await GetAll(Keyword,Item,info)
 
-@TypeCover_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
+@Keyword_api.post("/saveOrUpdate", summary=f'添加一个{NAME}', description='功能描述')
 async def saveOrUpdate(request: Request):
-    return await SaveUpdate(request,TypeCover,Item)
-
-@TypeCover_api.delete("/{id}",summary='删除指定内容',description='功能描述')
-async def deleteIteam(id:int):
-    return await delete(TypeCover, {"id": id}, "删除成功")
+    return await SaveUpdate(request,Keyword,Item)
+@Keyword_api.delete("/{id}",summary=f'删除指定{NAME}',description='功能描述')
+async def deleteKeyword(id:int):
+    return await delete(Keyword, {"id": id}, f"{NAME}删除成功")

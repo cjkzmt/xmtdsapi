@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from middlewares.database_retry_middleware import DatabaseRetryMiddleware
 from middlewares.content_type_middleware import ContentTypeMiddleware
 from middlewares.auth_middleware import AuthMiddleware
+from middlewares.db_health import DBHealthCheckMiddleware
 from datetime import datetime
 from app.UrlVDKey import UrlVDKey_api
 from app.UrlVD import UrlVD_api
@@ -38,6 +39,9 @@ from app.TypeVideo import TypeVideo_api
 from app.TypeCover import TypeCover_api
 from app.TypeSubtitle import TypeSubtitle_api
 from app.TeamOwner import TeamOwner_api
+from app.Keyword import Keyword_api
+from app.Data import Data_api
+
 
 load_dotenv() 
 app = FastAPI()
@@ -49,6 +53,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+app.add_middleware(DBHealthCheckMiddleware)
 app.add_middleware(DatabaseRetryMiddleware)  # 最先注册，最后执行
 app.add_middleware(AuthMiddleware)          # 第二注册
 app.add_middleware(ContentTypeMiddleware)   # 最后注册，最先执行
@@ -90,6 +96,8 @@ app.include_router(TypeCover_api,prefix="/api/typecover",tags=['封面样式'])
 app.include_router(TypeSubtitle_api,prefix="/api/typesubtitle",tags=['字幕样式'])
 app.include_router(UrlAuthor_api,prefix="/api/UrlAuthor",tags=['作者链接'])
 app.include_router(TeamOwner_api,prefix="/api/teamowner",tags=['团队拥有者'])
+app.include_router(Keyword_api,prefix="/api/keyword",tags=['关键词'])
+app.include_router(Data_api,prefix="/api/data",tags=['视频数据'])
 
 
 
