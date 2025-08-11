@@ -9,6 +9,7 @@ from .auth import *
 from tortoise.query_utils import Prefetch
 from datetime import datetime
 import tortoise.exceptions
+from tortoise.expressions import Case, When,Q
 from tortoise.transactions import in_transaction
 
 NAME='账号'
@@ -71,6 +72,7 @@ async def getPages(request: Request):
             query = query.filter(Phone_id=data.Phone_id)
         total = await query.count()
         offset = (data.currentPage - 1) * data.pageSize
+        query = query.order_by('AccountTeam_id')
         Accounts = await query.offset(offset).limit(data.pageSize)
         iteams_info = [
         Item(

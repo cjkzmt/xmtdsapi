@@ -47,6 +47,7 @@ async def getPages(request: Request):
             query = query.filter(AiApi_id=data.AiApi_id)
         total = await query.count()
         offset = (data.currentPage - 1) * data.pageSize
+        query=query.order_by("PNumber_id")
         iteams = await query.offset(offset).limit(data.pageSize)
         iteams_info = [
         Item(

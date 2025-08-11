@@ -8,6 +8,7 @@ from .models import *
 from .auth import *
 from tortoise.query_utils import Prefetch
 from datetime import datetime
+from collections import Counter
 import tortoise.exceptions
 from tortoise.transactions import in_transaction
 
@@ -19,7 +20,6 @@ class QueryCondition(Condition):
 class TopItem(BaseModel):
     id: Optional[int] = None
     number: Optional[int] = None
-    scope: Optional[str] = None
 
 class InItem(TopItem):
     Computer_id: Optional[int] = None
@@ -32,6 +32,7 @@ class InItem(TopItem):
     
     
 class Item(InItem):
+    AccountSum: Optional[int] = None
     Computer: Optional[str] = None
     TypeVideo: Optional[str] = None
     shorthand: Optional[str] = None
@@ -57,11 +58,17 @@ async def getPages(request: Request):
         total = await query.count()
         offset = (data.currentPage - 1) * data.pageSize
         iteams = await query.offset(offset).limit(data.pageSize)
+        rows = await Account.filter(
+            AccountTeam_id__in=[s.id for s in iteams],
+            name__isnull=False,
+            status='ENABLE'
+        ).values('AccountTeam_id')
+        data_map = Counter(r['AccountTeam_id'] for r in rows)
         iteams_info = [
         Item(
             id=iteam.id,
+            AccountSum=data_map[iteam.id],
             number=iteam.number,
-            scope=iteam.scope,
             TeamOwner_id=iteam.TeamOwner_id,
             shorthand=iteam.TeamOwner.shorthand if iteam.TeamOwner else None,
             Computer_id=iteam.Computer_id,
@@ -91,7 +98,7 @@ async def saveOrUpdate(request: Request):
 
 @AccountTeam_api.get("/TopIteams", summary='查找所有内容', description='功能描述')
 async def TopIteams():
-    return await GetAll(AccountTeam,TopItem,fields = ('id', 'number', 'scope'))
+    return await GetAll(AccountTeam,TopItem,fields = ('id', 'number'))
 
 @AccountTeam_api.delete("/{id}",summary='删除指定内容',description='功能描述')
 async def delete_iteam(id: int):

@@ -23,8 +23,6 @@ class QueryCondition(Condition):
     Day:Optional[int] = 28
     unScripList: Optional[list[int]] = []
     getinfo: Optional[str] = None
-    skip:Optional[int] = 0
-
 
 class InItem(BaseModel):
     id: Optional[int] = None
@@ -152,7 +150,9 @@ async def TaskList(request: Request):
                     Script_tasks.append({
                     'taskname':'Video',
                     'id':iteam.id})
-        if Create_Text and iteam.copystatus!='ENABLE':
+        if Create_Text:
+            if iteam.line:
+                if iteam.linestatus=='ENABLE':
                     if iteam.title is None:
                         Script_tasks.append({
                         'taskname':'title',
@@ -165,8 +165,8 @@ async def TaskList(request: Request):
                         Script_tasks.append({
                         'taskname':'reading',
                         'id':iteam.id})
-                    if iteam.line is None:
-                        Script_tasks.append({
+                continue
+            Script_tasks.append({
                         'taskname':'line',
                         'id':iteam.id})
     for iteam in Script_tasks:
@@ -181,74 +181,83 @@ async def TaskList(request: Request):
 
 @Script_api.post("/getPages", summary='分页查询用户数据', description='功能描述')
 async def getPages(request: Request):
-    TASK_TYPES = {'ReviewCopy',  'CreateText', 'CreateVideo', 'PublishVideo'}
-    TASK_TYPE = { 'CreateText', 'CreateVideo', 'PublishVideo'}
-    TASK_FILTERS = {
-        'ReviewCopy': {'line__isnull': False, 'copystatus__not': 'ENABLE'},
-        'CreateText': {'reading__isnull': True, 'copystatus__not': 'ENABLE'},
-        'CreateVideo': {'copystatu': 'ENABLE', 'videostatus__not': 'ENABLE'},
-        'PublishVideo':{'videostatus': 'ENABLE','status__not': '完成'},
-    }
     data = await parse_request_body(request, QueryCondition)
-    print(data)
-    query = Script.filter().prefetch_related(
-    "VideoTemplate", "topic", "copy", "PromptText", "Font", "Music", "Computer", "Over", 
-    Prefetch("AccountTeam", queryset=AccountTeam.all().prefetch_related("TypeVideo", "TypeCover", "TypeSubtitle",'TeamOwner')),)
-    query = condition(data,query)
+    
+    # 1. 定义常量提高可读性
+    TASK_TYPES = {'ReviewScript', 'ReviewCopy', 'ReviewVideo', '脚本文案任务', '视频文案任务'}
+    TASK_FILTERS = {
+        'ReviewScript': {'line__isnull': False, 'linestatus__not': 'ENABLE'},
+        'ReviewCopy': {'linestatus': 'ENABLE', 'copystatus__not': 'ENABLE'},
+        'ReviewVideo': {'videoname__isnull': False, 'videostatus__not': 'ENABLE'},
+        '脚本文案任务': {'line__isnull': True, 'topic_id__isnull': False},
+        '视频文案任务': {
+            'line__isnull': False, 
+            'linestatus': 'ENABLE', 
+            'reading__isnull': True, 
+            'topic_id__isnull': False
+        }
+    }
 
+    # 2. 构建基础查询
+    query = Script.filter().prefetch_related(
+        "VideoTemplate", "topic", "copy", "PromptText", "Font", "Music", "Computer", "Over", 
+        Prefetch("AccountTeam", queryset=AccountTeam.all().prefetch_related(
+            "TypeVideo", "TypeCover", "TypeSubtitle", 'TeamOwner'
+        )),
+    )
+    query = condition(data, query)
+    
+    # 3. 应用过滤条件
     if data.AccountTeam_id:
         query = query.filter(AccountTeam_id=data.AccountTeam_id)
-
+    
     if data.getinfo and data.getinfo in TASK_TYPES:
-        if data.getinfo in TASK_TYPE:
-            Role = request.state.user_info.get("Role")
-            if Role!="Computer":
-                return ResponseModel(
-                code="000001",
-                mesg="身份信息错误",
-                time=str(datetime.now()),
-                data=[])
-            PC_id = request.state.user_info.get("user_id")
-            computer = await Computer.get(id=PC_id)
-
+        # 优化时间计算
         now = datetime.now(timezone.utc)
-        start_time = now + timedelta(days=data.skip)
+        start_time = now
         end_time = now + timedelta(days=data.Day)
-        query = query.filter(publishtime__gt=start_time, publishtime__lt=end_time)
-        query = query.filter(id__not_in=data.unScripList)
         
-
-
-
+        query = query.filter(publishtime__gt=start_time, publishtime__lt=end_time)
+        query = query.filter(id__notin=data.unScripList)
+        
+        # 使用字典映射替代多重if判断
         if data.getinfo in TASK_FILTERS:
             query = query.filter(**TASK_FILTERS[data.getinfo])
 
+    # 4. 分页处理
     total = await query.count()
     offset = (data.currentPage - 1) * data.pageSize
+    
+    # 优化排序逻辑
     annotated_query = query.annotate(
         publishtime_isnull=Case(
             When(publishtime__isnull=True, then=1),
             default=0
         )
     ).order_by("publishtime_isnull", "publishtime", "AccountTeam_id")
-    Scripts = await annotated_query.offset(offset).limit(data.pageSize)
     
+    scripts = await annotated_query.offset(offset).limit(data.pageSize)
+    script_ids = [s.id for s in scripts]
+    
+    # 5. 批量获取关联数据
+    # 获取Data数据
     rows = await Data.filter(
-    Script_id__in=[s.id for s in Scripts],
-    Account__status='ENABLE'
-        ).values(
-            'id', 'Script_id', 'Account_id',
-            'Account__Platform__name',
-            'Account__Platform__publishurl',
-            'Account__Platform__character',
-            'Account__Platform__keycount',
-            'Account__Platform__verification',
-            'Account__Platform__advance',
-            'Account__Platform__publishverif',
-            'status')
+        Script_id__in=script_ids,
+        Account__status='ENABLE'
+    ).values(
+        'id', 'Script_id', 'Account_id',
+        'Account__Platform__name',
+        'Account__Platform__publishurl',
+        'Account__Platform__character',
+        'Account__Platform__keycount',
+        'Account__Platform__verification',
+        'Account__Platform__advance',
+        'Account__Platform__publishverif',
+        'status'
+    )
     
+    # 构建数据映射
     data_map = defaultdict(list)
-    
     for r in rows:
         data_map[r['Script_id']].append(DataItem(
             id=r['id'],
@@ -261,43 +270,65 @@ async def getPages(request: Request):
             verification=r['Account__Platform__verification'],
             advance=r['Account__Platform__advance'],
             publishverif=r['Account__Platform__publishverif'],
-            status=r['status']))
-    iteams_info = []
-    for iteam in Scripts:
-        datalist = data_map.get(iteam.id, [])
-        shorthand=scope=accountTeam=TypeVideo_id=TypeVideo=videoheight=videowidth=TypeCover_id=TypeCover=fixedtitle=TypeSubtitle_id=TypeSubtitle=fontsize=fontcolor=None
-        if iteam.AccountTeam:
-            accountTeam=iteam.AccountTeam.number
+            status=r['status']
+        ))
+    
+    # 6. 构建响应数据
+    items_info = []
+    for script in scripts:
+        # 安全获取关联对象属性
+        account_team = script.AccountTeam
+        shorthand = scope = accountTeam = None
+        TypeVideo_id = TypeVideo = videoheight = videowidth = None
+        TypeCover_id = TypeCover = fixedtitle = None
+        TypeSubtitle_id = TypeSubtitle = fontsize = fontcolor = None
+        
+        if account_team:
+            accountTeam = account_team.number
             
-            TypeVideo_id=iteam.AccountTeam.TypeVideo_id
-            TypeCover_id=iteam.AccountTeam.TypeCover_id
-            TypeSubtitle_id=iteam.AccountTeam.TypeCover_id
-            if iteam.AccountTeam.TypeVideo:
-                TypeVideo=iteam.AccountTeam.TypeVideo.name
-                videoheight=iteam.AccountTeam.TypeVideo.videoheight
-                videowidth=iteam.AccountTeam.TypeVideo.videowidth
-            if iteam.AccountTeam.TypeCover:
-                TypeCover=iteam.AccountTeam.TypeCover.name
-                fixedtitle=iteam.AccountTeam.TypeCover.fixedtitle
-            if iteam.AccountTeam.TypeSubtitle:
-                TypeSubtitle=iteam.AccountTeam.TypeSubtitle.name
-                fontsize=iteam.AccountTeam.TypeSubtitle.fontsize
-                fontcolor=iteam.AccountTeam.TypeSubtitle.fontcolor
-            if iteam.AccountTeam.TeamOwner:
-                shorthand=iteam.AccountTeam.TeamOwner.shorthand
-                scope=iteam.AccountTeam.TeamOwner.scope
-        iteams_info.append(Item(
-            id=iteam.id,
-            VideoTemplate_id=iteam.VideoTemplate_id,
-            VideoTemplate=iteam.VideoTemplate.name if iteam.VideoTemplate else None,
-            topic_id=iteam.topic_id,
-            copy_id=iteam.copy_id,
-            PromptText_id=iteam.PromptText_id,
-            topictext=iteam.topic.text if iteam.topic else None,
-            copytext=iteam.copy.text if iteam.copy else None,
-            promptText=iteam.PromptText.text if iteam.PromptText else None,
-            title=iteam.title,
-            AccountTeam_id=iteam.AccountTeam_id,
+            if account_team.TeamOwner:
+                shorthand = account_team.TeamOwner.shorthand
+                scope = account_team.TeamOwner.scope
+            
+            if account_team.TypeVideo:
+                TypeVideo_id = account_team.TypeVideo.id
+                TypeVideo = account_team.TypeVideo.name
+                videoheight = account_team.TypeVideo.videoheight
+                videowidth = account_team.TypeVideo.videowidth
+            
+            if account_team.TypeCover:
+                TypeCover_id = account_team.TypeCover.id
+                TypeCover = account_team.TypeCover.name
+                fixedtitle = account_team.TypeCover.fixedtitle
+            
+            if account_team.TypeSubtitle:
+                TypeSubtitle_id = account_team.TypeSubtitle.id
+                TypeSubtitle = account_team.TypeSubtitle.name
+                fontsize = account_team.TypeSubtitle.fontsize
+                fontcolor = account_team.TypeSubtitle.fontcolor
+        
+        # 安全获取文本内容
+        topic_text = getattr(script.topic, 'text', None) if script.topic else None
+        copy_text = getattr(script.copy, 'text', None) if script.copy else None
+        prompt_text = getattr(script.PromptText, 'text', None) if script.PromptText else None
+        
+        # 构建模板编号
+        Templatenum = None
+        if all([script.AccountTeam, script.topic, script.copy, script.PromptText]):
+            Templatenum = f"{script.AccountTeam.number}_{script.topic_id}_{script.copy_id}_{script.PromptText_id}"
+        
+        items_info.append(Item(
+            id=script.id,
+            VideoTemplate_id=script.VideoTemplate_id,
+            VideoTemplate=getattr(script.VideoTemplate, 'name', None),
+            topic_id=script.topic_id,
+            copy_id=script.copy_id,
+            PromptText_id=script.PromptText_id,
+            topictext=topic_text,
+            copytext=copy_text,
+            promptText=prompt_text,
+            title=script.title,
+            AccountTeam_id=script.AccountTeam_id,
             AccountTeam=accountTeam,
             shorthand=shorthand,
             scope=scope,
@@ -312,33 +343,35 @@ async def getPages(request: Request):
             TypeSubtitle=TypeSubtitle,
             fontsize=fontsize,
             fontcolor=fontcolor,
-            cover=iteam.cover,
-            drafline=iteam.drafline,
-            line=iteam.line,
-            linestatus=iteam.linestatus,
-            subtitle=iteam.subtitle,
-            reading=iteam.reading,   
-            copystatus=iteam.copystatus,
-            Font_id=iteam.Font_id,
-            Font=getattr(iteam.Font, 'name', None),
-            publishtime=str(iteam.publishtime) if iteam.publishtime else None,
-            Templatenum=f'{str(iteam.AccountTeam.number)}_{str(iteam.topic_id)}_{str(iteam.copy_id)}_{str(iteam.PromptText_id)}' if iteam.topic and iteam.AccountTeam and iteam.copy and iteam.PromptText else None,
-            ReleasePlan_id=iteam.ReleasePlan_id,
-            operator_id=iteam.operator_id,
-            Computer_id=iteam.Computer_id,
-            videoname=iteam.videoname,
-            videopath=iteam.videopath,
-            videostatus=iteam.videostatus,
-            Music_id=iteam.Music_id,
-            Music=getattr(iteam.Music, 'name', None),
-            Over_id=iteam.Over_id,
-            Over=getattr(iteam.Over, 'filename', None),
-            speed=getattr(iteam.Over, 'speed', None) ,
-            status=iteam.status,
-            publish=datalist,
-            createdTime=str(iteam.createdTime),
-            updatedTime=str(iteam.updatedTime)) )
-    return queryResult(data,QueryResult,iteams_info,total)
+            cover=script.cover,
+            drafline=script.drafline,
+            line=script.line,
+            linestatus=script.linestatus,
+            subtitle=script.subtitle,
+            reading=script.reading,
+            copystatus=script.copystatus,
+            Font_id=script.Font_id,
+            Font=getattr(script.Font, 'name', None),
+            publishtime=str(script.publishtime) if script.publishtime else None,
+            Templatenum=Templatenum,
+            ReleasePlan_id=script.ReleasePlan_id,
+            operator_id=script.operator_id,
+            Computer_id=script.Computer_id,
+            videoname=script.videoname,
+            videopath=script.videopath,
+            videostatus=script.videostatus,
+            Music_id=script.Music_id,
+            Music=getattr(script.Music, 'name', None),
+            Over_id=script.Over_id,
+            Over=getattr(script.Over, 'filename', None),
+            speed=getattr(script.Over, 'speed', None) if script.Over else None,
+            status=script.status,
+            publish=data_map.get(script.id, []),
+            createdTime=str(script.createdTime),
+            updatedTime=str(script.updatedTime)
+        ))
+    
+    return queryResult(data, QueryResult, items_info, total)
 
 @Script_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
 async def saveOrUpdate(request: Request):
@@ -427,7 +460,6 @@ async def creatScript(request: Request):
 
 @Script_api.get("/RefreshTask", summary='添加一个内容', description='功能描述')
 async def RefreshTask():
-    
     iteams = await Script.filter(publishtime__isnull=False,status__not='完成')
     print(len(iteams))
     for iteam in iteams:
