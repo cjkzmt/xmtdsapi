@@ -19,11 +19,11 @@ class QueryCondition(Condition):
 class TopItem(BaseModel):
     id: Optional[int] = None
     number: Optional[int] = None
+    code: Optional[int] = None
 
 class InItem(TopItem):
     rent: Optional[int] = None
     Owner: Optional[str] = None
-    code: Optional[int] = None
     Phone_id: Optional[int] = None
     status: Optional[str] = None
 
@@ -43,8 +43,10 @@ async def getPages(request: Request):
         query = condition(data,query)
         if data.number:
             query = query.filter(number__icontains=data.number)
+
         total = await query.count()
         offset = (data.currentPage - 1) * data.pageSize
+        query=query.order_by("code")
         iteams = await query.offset(offset).limit(data.pageSize)
         iteams_info = [
         Item(
@@ -67,7 +69,7 @@ async def saveOrUpdate(request: Request):
 
 @PNumber_api.get("/TopIteams", summary='查找所有内容', description='功能描述')
 async def TopIteams():
-    return await GetAll(PNumber,TopItem,fields= ('id', 'number'))
+    return await GetAll(PNumber,TopItem,fields= ('id', 'number', 'code'))
 
 @PNumber_api.delete("/{id}",summary='删除指定内容',description='功能描述')
 async def delete_iteam(id: int):

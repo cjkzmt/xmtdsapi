@@ -10,6 +10,8 @@ from tortoise.query_utils import Prefetch
 from datetime import datetime
 import tortoise.exceptions
 from tortoise.transactions import in_transaction
+from collections import defaultdict
+from collections import Counter
 TeamOwner_api = APIRouter()
 
 class QueryCondition(Condition):
@@ -36,10 +38,12 @@ class InItem(TopItem,ItemB):
     status: Optional[str] = None
 
 class Item(InItem):
+    AccountSum: Optional[int] = None
+    teamSum: Optional[int] = None
     createdTime: Optional[str] = None
 
 class QueryResult(Result):
-    records: List[InItem] 
+    records: List[Item] 
 
 @TeamOwner_api.post("/getPages", summary='分页查询用户数据', description='功能描述')
 async def getPages(request: Request):
@@ -52,9 +56,36 @@ async def getPages(request: Request):
             query = query.filter(number__icontains=data.number)
         total = await query.count()
         offset = (data.currentPage - 1) * data.pageSize
-        TeamOwners = await query.offset(offset).limit(data.pageSize)
+
+
+
+
+
+
+
+
+
+
+
+        iteams = await query.offset(offset).limit(data.pageSize)
+
+        rows = await AccountTeam.filter(
+            TeamOwner_id__in=[s.id for s in iteams], status='ENABLE'
+        ).values('TeamOwner_id')
+
+        data_map = Counter(r['TeamOwner_id'] for r in rows)
+
+        rowss = await Account.filter(
+            AccountTeam__TeamOwner_id__in=[s.id for s in iteams],
+            name__isnull=False,
+            status='ENABLE'
+        ).values('AccountTeam__TeamOwner_id')
+        dataa_map = Counter(r['AccountTeam__TeamOwner_id'] for r in rowss)
+
+
+
         iteams_info = [
-        InItem(
+        Item(
             id=TeamOwner.id,
             name=TeamOwner.name,
             shorthand=TeamOwner.shorthand,
@@ -68,9 +99,11 @@ async def getPages(request: Request):
             path=TeamOwner.path,
             note=TeamOwner.note,
             sort=TeamOwner.sort,
+            teamSum=data_map.get(TeamOwner.id, 0),
+            AccountSum=dataa_map.get(TeamOwner.id, 0),
             createdTime=str(TeamOwner.createdTime),
             status=TeamOwner.status,
-            ) for TeamOwner in TeamOwners]
+            ) for TeamOwner in iteams]
         return queryResult(data,QueryResult,iteams_info,total)
 @TeamOwner_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
 async def saveOrUpdate(request: Request):

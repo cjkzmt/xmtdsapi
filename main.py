@@ -42,7 +42,6 @@ from app.TeamOwner import TeamOwner_api
 from app.Keyword import Keyword_api
 from app.Data import Data_api
 
-
 load_dotenv() 
 app = FastAPI()
 app.add_middleware(
@@ -52,7 +51,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 app.add_middleware(DBHealthCheckMiddleware)
 app.add_middleware(DatabaseRetryMiddleware)  # 最先注册，最后执行
@@ -99,10 +97,7 @@ app.include_router(TeamOwner_api,prefix="/api/teamowner",tags=['团队拥有者'
 app.include_router(Keyword_api,prefix="/api/keyword",tags=['关键词'])
 app.include_router(Data_api,prefix="/api/data",tags=['视频数据'])
 
-
-
 # app.include_router(User_api,prefix="/cs/user",tags=['操作用户'])
-
 
 if __name__ == "__main__":
     pass

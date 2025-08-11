@@ -230,8 +230,7 @@ class TeamOwner(Model):#团队拥有者
 class AccountTeam(Model):
     id = fields.IntField(pk=True)
     number = fields.IntField(description="组号", unique=True)
-    scope=fields.CharField(max_length=255, default=None, null=True, description="业务范围")
-    TeamOwner=fields.ForeignKeyField("models.TeamOwner", related_name="team_owner",description="团队拥有者")
+    TeamOwner=fields.ForeignKeyField("models.TeamOwner", related_name="team_owner",description="团队拥有者", on_delete=fields.CASCADE)
     Phone=fields.ForeignKeyField("models.Phone",default=None, null=True,  related_name="team_phone", description="所在手机")
     Computer=fields.ForeignKeyField("models.Computer",default=None, null=True,  related_name="team_computer", description="所在电脑")
     createdTime = fields.DatetimeField(auto_now_add=True, description="制作日期")
@@ -242,7 +241,7 @@ class AccountTeam(Model):
 
 class Account(Model):
     id = fields.IntField(pk=True)
-    AccountTeam=fields.ForeignKeyField("models.AccountTeam", related_name="team_account", description="所在组")
+    AccountTeam=fields.ForeignKeyField("models.AccountTeam", related_name="team_account", description="所在组", on_delete=fields.CASCADE)
     Platform = fields.ForeignKeyField("models.Platform", related_name="accounts", description="新媒体平台")
     name = fields.CharField(max_length=255, default=None, null=True, description="名字")
     number = fields.CharField(max_length=255, default=None, null=True, description="账号ID")
@@ -287,9 +286,6 @@ class OllamaModel(Model):
     model=fields.CharField(max_length=128, default=None, null=True, description="模型")
     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
 
-
-
-
 class Script(Model):#视频脚本
     id = fields.IntField(pk=True)
     topic=fields.ForeignKeyField("models.TopicCopy",null=True, default=None, related_name="script_topic", description="选题", on_delete=fields.CASCADE)
@@ -318,10 +314,6 @@ class Script(Model):#视频脚本
     subtitle = fields.TextField(null=True, default=None,description="显示字幕")
     reading = fields.TextField(null=True, default=None,description="字幕读音")
     videoname = fields.CharField(max_length=64,default=None, null=True, description="视频文件名")
-    # douyin= fields.CharField(max_length=16,  description="抖音发布状态")
-    # sph= fields.CharField(max_length=16,  description="视频号发布状态")
-    # kuaishou= fields.CharField(max_length=16,  description="快手发布状态")
-    # xiaohongshu= fields.CharField(max_length=16,  description="小红书发布状态")
     status = fields.CharField(max_length=32, default="脚本文案待制作", description="状态")
     Computer = fields.ForeignKeyField("models.Computer",null=True, default=None, related_name="script_computer", description="操作电脑")
     updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
@@ -418,48 +410,6 @@ class Data(Model):#抖音数据
 #     CutVideo=fields.ForeignKeyField("models.CutVideo", related_name="mirrorvideos", description="裁剪素材")
 #     status = fields.CharField(max_length=32, default="待使用", description="状态")
 
-
-# class UploadVideo(Model):#上传视频
-#     id = fields.IntField(pk=True)
-#     number = fields.CharField(max_length=255, description="视频编号")
-#     Video = fields.ForeignKeyField("models.Video", related_name="uploadvideos", description="视频")
-#     DYData = fields.ForeignKeyField("models.DYData", related_name="uploadvideos", description="抖音数据")
-#     SPHData = fields.ForeignKeyField("models.SPHData", related_name="uploadvideos", description="视频号数据")
-#     XHSData = fields.ForeignKeyField("models.XHSData", related_name="uploadvideos", description="小红书数据")
-#     KSData = fields.ForeignKeyField("models.KSData", related_name="uploadvideos", description="快手数据")
-
-
-
-    # draflineModel=fields.ForeignKeyField("models.OllamaModel",related_name="draft_line_Model", null=True, default=None, description="模型")
-    # draftitleModel=fields.ForeignKeyField("models.OllamaModel",related_name="draft_title_Model", null=True, default=None, description="模型")
-    # drafcoverModel=fields.ForeignKeyField("models.OllamaModel",related_name="draf_cover_Model", null=True, default=None, description="模型")
-    # titleModel=fields.ForeignKeyField("models.OllamaModel",related_name="title_Model", null=True, default=None, description="模型")
-    # coverModel=fields.ForeignKeyField("models.OllamaModel",related_name="cover_Model", null=True, default=None, description="模型")
-    # subtitleModel=fields.ForeignKeyField("models.OllamaModel",related_name="subtitle_Model", null=True, default=None, description="模型")
-    # lineModel=fields.ForeignKeyField("models.OllamaModel",related_name="line_Model", null=True, default=None, description="模型")
-
-
-    
-   
-    
-    
-    
-
-
-# class Video(Model):#视频
-#     id = fields.IntField(pk=True)
-#     Script = fields.ForeignKeyField('models.Script', related_name='task', default=None, null=True, unique=True)
-#     
-#     status = fields.CharField(max_length=32, default="Unfinished", description="状态")
-#     createdTime = fields.DatetimeField(auto_now_add=True, description="制作日期")
-#     updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
-
-# class Task(Model):
-#     id= fields.IntField(pk=True)
-
-#     Script= fields.ForeignKeyField("models.Script", related_name="task", default=None, null=True, description="脚本")
-   
-#     status= fields.CharField(max_length=32, default="DISABLE", description="状态")
     
 #用户信息=============================================
 # class Fans(Model):#粉丝
@@ -489,42 +439,14 @@ class Data(Model):#抖音数据
 #     createdTime = fields.DatetimeField(auto_now_add=True, description="录入日期")
     # updatedTime = fields.DatetimeField(auto_now=True, description="最后更新日期")
 
-
-
-
-
-
-
 # class Payment(Model):#缴费记录
 #     id = fields.IntField(pk=True)
 #     amount = fields.IntField(description="金额")
 #     PNumber=fields.ForeignKeyField("models.PNumber", related_name="payments", description="手机号码")
 #     update = fields.DatetimeField(auto_now_add=True, description="录入日期")
-
-#     
 #     status = fields.CharField(max_length=32, default="ENABLE", description="状态")
 # # 账号内信息==================================================================================
 
-
-# class AStatus(Model):#账号状态
-#     id = fields.IntField(pk=True)
-#     name = fields.CharField(max_length=255, description="状态名")
-
-
-
-
-
-#     Certifier =  fields.ForeignKeyField("models.Certifier", related_name="wxas", description="认证人")
-#     PNumber =  fields.ForeignKeyField("models.PNumber", related_name="wxas", description="手机号码")
-#     Phone =  fields.ForeignKeyField("models.Phone", related_name="wxas", description="所在手机")
-#     Platform =  fields.ForeignKeyField("models.Platform", related_name="wxas", description="新媒体平台")
-#     AStatus = fields.ForeignKeyField("models.AStatus", related_name="wxas", description="账号状态")
-#     update = fields.DatetimeField(auto_now_add=True, description="创建日期")
-#     
-
-
-
-#     
 # class Message(Model):#对话
 #     id = fields.IntField(pk=True)
 #     content = fields.CharField(max_length=255, description="内容")
