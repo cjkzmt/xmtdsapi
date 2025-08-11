@@ -15,18 +15,22 @@ Font_api = APIRouter()
 class QueryCondition(Condition):
     name: Optional[str] = None
 
-class Item(BaseModel):
+class TopItem(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
+
+class InItem(TopItem):
     url: Optional[str] = None
-    createdTime: Optional[str] = None
     status: Optional[str] = None
+
+class Item(InItem):
+    createdTime: Optional[str] = None
 
 class QueryResult(Result):
     records: List[Item]
 
-@Font_api.post("/getFontPages", summary='分页查询用户数据', description='功能描述')
-async def get_Font_pages(request: Request):
+@Font_api.post("/getPages", summary='分页查询用户数据', description='功能描述')
+async def getPages(request: Request):
     async with in_transaction():
         data = await parse_request_body(request, QueryCondition)
         print(data)
@@ -44,91 +48,22 @@ async def get_Font_pages(request: Request):
             status=iteam.status,
             ) for iteam in iteams
         ]
-        pages=(total + data.pageSize - 1) // data.pageSize if total > 0 else 0
-        query_result = QueryResult(
-            current=data.currentPage,
-            hitcount=True,
-            optimizeCountSql=False,
-            orders=[],
-            pages=pages,
-            records=iteams_info,
-            searchCount=True,
-            size=data.pageSize,
-            total=total
-        )
-        
-        return ResponseModel(
-            code="000000",
-            mesg="操作成功",
-            time=str(datetime.now()),
-            data=query_result
-    )
-
+        return queryResult(data,QueryResult,iteams_info,total)
 
 @Font_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
 async def addFont(request: Request):
-    async with in_transaction():
-        Font_in = await parse_request_body(request, Item)
-        print(Font_in)
-        if Font_in.id:
-            iteam = await Font.get(id=Font_in.id)
-            if Font_in.name:
-                iteam.name = Font_in.name
-            if Font_in.url:
-                iteam.url = Font_in.url
-            if Font_in.status:
-                iteam.status = Font_in.status
-            await iteam.save()
-            return ResponseModel(code="000000", mesg="更新成功", time=str(datetime.now()), data=True)
-        try:
-            await TopicCopy.get(name=Font_in.name)
-            return ResponseModel[str](
-            code="000001",
-            mesg="添加失败",
-            time=str(datetime.now()),
-            data=f"已存在,{Font_in.name}")
-        except:pass
-        await Font.create(name=Font_in.name)
-        return ResponseModel(code="000000", mesg="添加成功", time=str(datetime.now()), data=True)
+    return await SaveUpdate(request,Font,InItem)
 
-
-class TopFont(BaseModel):
-    id: Optional[int] = None
-    name: Optional[str] = None
-
-@Font_api.get("/TopFonts", summary='查找所有内容', description='功能描述')
-async def getAllTopFonts():
-    async with in_transaction():
-        Fonts = await Font.all().values('id', 'name')
-        iteams_info = [
-            TopFont(
-                id=Font['id'],
-                name=Font['name']
-            ) for Font in Fonts
-        ]
-        return ResponseModel(
-            code="000000",
-            mesg="获取成功",
-            time=str(datetime.now()),
-            data=iteams_info
-        )
-
+@Font_api.get("/TopIteams", summary='查找所有内容', description='功能描述')
+async def TopIteams():
+    return await GetAll(Font,TopItem,fields=('id', 'name'))
 
 class FontList(BaseModel):
-    FontList: List[Item]
-@Font_api.post("/saveList", summary='添加一个内容', description='功能描述')
+    itemList: List[Item]
+
+@Font_api.post("/saveList", summary="批量保存字体列表")
 async def saveList(request: Request):
-    async with in_transaction():
-        Fonts = await parse_request_body(request, FontList)
-        sum=len(Fonts.FontList)
-        Success=Failure=0
-        for Font_in in Fonts.FontList:
-            try:
-                await Font.create(name=Font_in.name)
-                Success+=1
-            except:
-                Failure+=1
-    return ResponseModel(code="000000", mesg=f"一共{sum}个字体，添加成功{Success}，失败{Failure}", time=str(datetime.now()), data=True)
+    return await save_list(request,Font,FontList,("name"),'字体')
 
 @Font_api.delete("/{id}",summary='删除指定内容',description='功能描述')
 async def delete_iteam(id: int):

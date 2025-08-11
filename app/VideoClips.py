@@ -15,18 +15,20 @@ VideoClips_api = APIRouter()
 class QueryCondition(Condition):
     name: Optional[str] = None
 
-class Item(BaseModel):
+class InItem(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     clipsum: Optional[int] = None
-    createdTime: Optional[str] = None
     status: Optional[str] = None
+
+class Item(InItem):
+    createdTime: Optional[str] = None
 
 class QueryResult(Result):
     records: List[Item]
 
-@VideoClips_api.post("/getVideoClipsPages", summary='分页查询用户数据', description='功能描述')
-async def get_VideoClips_pages(request: Request):
+@VideoClips_api.post("/getPages", summary='分页查询用户数据', description='功能描述')
+async def getPages(request: Request):
     async with in_transaction():
         data = await parse_request_body(request, QueryCondition)
         print(data)
@@ -42,53 +44,15 @@ async def get_VideoClips_pages(request: Request):
             clipsum=iteam.clipsum,
             createdTime=str(iteam.createdTime),
             status=iteam.status,
-            ) for iteam in iteams
-        ]
-        pages=(total + data.pageSize - 1) // data.pageSize if total > 0 else 0
-        query_result = QueryResult(
-            current=data.currentPage,
-            hitcount=True,
-            optimizeCountSql=False,
-            orders=[],
-            pages=pages,
-            records=iteams_info,
-            searchCount=True,
-            size=data.pageSize,
-            total=total
-        )
-        return ResponseModel(
-            code="000000",
-            mesg="操作成功",
-            time=str(datetime.now()),
-            data=query_result
-    )
+            ) for iteam in iteams]
+        return queryResult(data,QueryResult,iteams_info,total)
+
 
 @VideoClips_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
-async def addVideoClips(request: Request):
-    async with in_transaction():
-        VideoClips_in = await parse_request_body(request, Item)
-        print(VideoClips_in)
-        if VideoClips_in.id:
-            VideoClipsing = await VideoClips.get(id=VideoClips_in.id)
-            if VideoClips_in.name:
-                VideoClipsing.name = VideoClips_in.name
-            if VideoClips_in.clipsum and VideoClips_in.clipsum>0:
-                VideoClipsing.clipsum = VideoClips_in.clipsum
-            if VideoClips_in.status:
-                VideoClipsing.status = VideoClips_in.status
-            await VideoClipsing.save()
-            return ResponseModel(code="000000", mesg="更新成功", time=str(datetime.now()), data=True)
-        try:
-            await TopicCopy.get(name=VideoClips_in.name)
-            return ResponseModel[str](
-            code="000001",
-            mesg="添加失败",
-            time=str(datetime.now()),
-            data=f"已存在,{VideoClips_in.name}")
-        except:pass
-        await VideoClips.create(name=VideoClips_in.name)
-        return ResponseModel(code="000000", mesg="添加成功", time=str(datetime.now()), data=True)
+async def saveOrUpdate(request: Request):
+    fields = ('clipsum', 'TypeCover_id', 'TypeSubtitle_id', 'TypeVideo_id')
+    return await SaveUpdate(request,AccountTeam,InItem,fields)
 
 @VideoClips_api.delete("/{id}",summary='删除指定内容',description='功能描述')
-async def delete_iteam(id: int):
+async def deleteiteam(id: int):
     return await delete(VideoClips, {"id": id}, "删除成功")

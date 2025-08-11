@@ -14,42 +14,21 @@ from datetime import datetime
 from tortoise.transactions import in_transaction#async with in_transaction():
 Ollama_api = APIRouter()
 
-class OllamaUrlItem(BaseModel):
+class Item(BaseModel):
     id: Optional[int] = None
     url: Optional[str] = None
     status: Optional[str] = None
     isDel : Optional[bool] = False
 
-@Ollama_api.get("/getAllUrl", summary='分页查询用户数据', description='功能描述')
-async def getAllUrl():
-    Ollamas = await OllamaUrl.filter(isDel=False, status="DISABLE").all()
-    iteams_info = [
-            OllamaUrlItem(
-                id=Ollama.id,
-                url=Ollama.url,
-                status=Ollama.status,
-            ) for Ollama in Ollamas]
-    return ResponseModel(
-        code="000000",
-        mesg="获取成功",
-        time=str(datetime.now()),
-        data=iteams_info)
+@Ollama_api.get("/getAll", summary='分页查询用户数据', description='功能描述')
+async def getAll(info: Item = Depends()):
+    return await GetAll(TypeSubtitle,Item,info)
 
-
-@Ollama_api.post("/UpdateUrl", summary='添加一个内容', description='功能描述')
-async def UpdateUrl(request: Request):
-    async with in_transaction():
-        Ollama_in = await parse_request_body(request, OllamaUrlItem)
-        print(Ollama_in)
-        iteam = await OllamaUrl.get(id=Ollama_in.id)
-        if  Ollama_in.status:
-            iteam.status = Ollama_in.status
-        if Ollama_in.isDel is not None:
-            iteam.isDel = Ollama_in.isDel
-        await iteam.save()
-        return ResponseModel(code="000000", mesg="更新成功", time=str(datetime.now()), data=True)
+@Ollama_api.post("/saveOrUpdate", summary='添加一个内容', description='功能描述')
+async def saveOrUpdate(request: Request):
+    return await SaveUpdate(request,AccountTeam,Item)
 
 @Ollama_api.delete("/{id}", summary='删除指定内容', description='功能描述')
 async def delete_iteam(id: int):
-    return await delete(OllamaUrl, {"id": id}, "音乐删除成功")
+    return await delete(OllamaUrl, {"id": id}, "删除成功")
 
