@@ -16,7 +16,7 @@ from app.menus import menus_api
 from app.TypeText import TypeText_api
 from app.PromptText import PromptText_api
 from app.TopicCopy import TopicCopy_api
-from app.Script import Script_api
+from app.Script1 import Script_api
 from app.UrlAuthor import UrlAuthor_api
 from app.Author import Author_api
 from app.AccountTeam import AccountTeam_api
@@ -40,7 +40,7 @@ from app.TypeCover import TypeCover_api
 from app.TypeSubtitle import TypeSubtitle_api
 from app.TeamOwner import TeamOwner_api
 from app.Keyword import Keyword_api
-from app.Data import Data_api
+from app.Data1 import Data_api
 
 load_dotenv() 
 app = FastAPI()

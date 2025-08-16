@@ -9,6 +9,12 @@ aerich upgrade
 python -m aerich migrate
 python -m aerich upgrade
 '''
+class Time(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=32, description="名字")
+    time = fields.DatetimeField( null=True,default=None, description="开始创建时间")
+    createdTime = fields.DatetimeField(auto_now_add=True, description="开始创建时间")
+
 class User(Model):#操作用户
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=32, index=True, description="用户名")
@@ -55,6 +61,7 @@ class Platform(Model):#新媒体平台名
     English=fields.CharField(max_length=255,null=True, default=None, description="英文名")
     sort = fields.IntField(default=0, description="排序")
     publish=fields.CharField(max_length=32, default="DISABLE", description="状态")
+    loginurl = fields.CharField(max_length=255, null=True, default=None, description="登录地址")
     publishurl=fields.CharField(max_length=255,null=True, default=None, description="发布链接")
     Scrapeurl=fields.CharField(max_length=255,null=True, default=None, description="采集链接")
     character= fields.IntField(default=10, description="标题字数")
@@ -245,6 +252,8 @@ class Account(Model):
     Platform = fields.ForeignKeyField("models.Platform", related_name="accounts", description="新媒体平台")
     name = fields.CharField(max_length=255, default=None, null=True, description="名字")
     number = fields.CharField(max_length=255, default=None, null=True, description="账号ID")
+    InitFans=fields.IntField(default=None, description="初始粉丝数")
+    newFans=fields.IntField(default=None, description="当前粉丝数")
     isDel=fields.BooleanField(default=False)
     password = fields.CharField(max_length=128, null=True, default=None, description="密码")
     profile = fields.CharField(max_length=255, default=None, null=True, description="简介")
@@ -323,8 +332,8 @@ class Data(Model):#抖音数据
     Script = fields.ForeignKeyField("models.Script", related_name="data_script", default=None, null=True, description="视频脚本",on_delete=fields.CASCADE)
     Account= fields.ForeignKeyField("models.Account", related_name="data_account", default=None, null=True, description="发布账号")
     status = fields.CharField(max_length=16, default="DISABLE", description="状态")
-    title = fields.CharField(max_length=252, description="作品,作品名称,视频描述,笔记标题")
-    publishtime = fields.CharField(max_length=60, description="首次发布时间")
+    title = fields.CharField(max_length=252, default=None, null=True, description="作品,作品名称,视频描述,笔记标题")
+    publishtime = fields.CharField(max_length=60, default=None, null=True,description="首次发布时间")
     views = fields.IntField(default=0, description="播放量,观看量")
     completion = fields.IntField(default=0, description="完播率")
     comment =  fields.IntField(default=0, description="评论量")
